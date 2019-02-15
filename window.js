@@ -1,27 +1,80 @@
-// In the renderer process.
-const { desktopCapturer, remote } = require('electron')
+$(document).ready(function(){
 
-const constraints = {
-  video: true
-}
+$('.tooltipped').tooltip();
+
+const { ipcRenderer, desktopCapturer, remote } = require('electron')
+const fs = require('fs');
 
 var recording = false;
 
-$('.start-rec').click(() => {
+var path = '';
+
+try {
+  fs.readFile('params.json', (err, data) => {
+    console.log(JSON.parse(data));
+    path = JSON.parse(data).path;
+  })
+} catch (e) {}
+
+ipcRenderer.on('path:set', (e, p) => path = p);
+
+$('.start-rec.cam').click(() => {
+  const constraints = {
+    video: true,
+    audio: true
+  }
   navigator.mediaDevices.getUserMedia(constraints)
-          .then((stream) => handleStream(stream))
+          .then((stream) => handleStream(stream, 'cam'))
           .catch((e) => handleError(e))
 })
 
-function handleStream (stream) {
+$('.start-rec.dis').click(() => {
+  desktopCapturer.getSources({ types: ['window', 'screen'] }, (error, sources) => {
+    if (error) throw error
+
+    for (let s of sources) {
+      if (!s.name.includes('Chrome')) continue;
+
+      const constraints = {
+        audio: {
+          mandatory: {
+            chromeMediaSource: 'desktop',
+            chromeMediaSourceId: s.id
+          }
+        },
+        video: {
+          mandatory: {
+            chromeMediaSource: 'desktop',
+            chromeMediaSourceId: s.id
+          }
+        }
+      }
+
+      navigator.mediaDevices.getUserMedia(constraints)
+              .then((stream) => handleStream(stream, 'dis'))
+              .catch((e) => handleError(e))
+
+    }
+
+  })
+})
+
+function handleStream (stream, cl) {
   recording = true;
+  $('.start-rec.' + cl).addClass('disabled');
+  $('.stop-rec.' + cl).removeClass('disabled');
+  $('.rec-text.' + cl).slideDown('medium');
+
+
   const recorder = new MediaRecorder(stream); // what receives the video
 
   // what preprocesses the video and passes it over to the 'storage_stream'
   const blob_reader = new FileReader();
 
   // what saves to file
-  const storage_stream = require("fs").createWriteStream('i.mp4');
+  let d = new Date();
+  let fname = `${path}/${cl} (${d.getDate()}-${d.getMonth()}_${d.getHours()}-${d.getMinutes()}).mp4`;
+  const storage_stream = fs.createWriteStream(fname);
 
   // array that stores unprocessed data
   const blobs = [];
@@ -53,9 +106,12 @@ function handleStream (stream) {
   recorder.start(1) // start recording, where timeslice = 1
 
 
-  $('.stop-rec').on('click', function clicking () {
+  $('.stop-rec.' + cl).on('click', function clicking () {
     recording = false;
     $(this).off('click', clicking)
+    $('.stop-rec.' + cl).addClass('disabled');
+    $('.start-rec.' + cl).removeClass('disabled');
+    $('.rec-text.' + cl).slideUp('medium');
 
     // stop services
     recorder.stop();
@@ -68,3 +124,5 @@ function handleStream (stream) {
 function handleError (e) {
   console.log(e)
 }
+
+})

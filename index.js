@@ -1,11 +1,15 @@
-const {app, BrowserWindow} = require('electron') // http://electronjs.org/docs/api
-const path = require('path') // https://nodejs.org/api/path.html
-const url = require('url') // https://nodejs.org/api/url.html
+const { app, BrowserWindow, dialog, Menu, ipcMain } = require('electron')
+const path = require('path')
+const url = require('url')
+const fs = require('fs');
 
 let window = null
 
 // Wait until the app is ready
 app.once('ready', () => {
+
+  createMenu();
+
   // Create a new window
   window = new BrowserWindow({
     // Set the initial width to 400px
@@ -26,5 +30,47 @@ app.once('ready', () => {
   // Show window when page is ready
   window.once('ready-to-show', () => {
     window.show()
+
   })
+
+
 })
+
+function createMenu() {
+  const template = [
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'Set path',
+          click: () => {
+            dialog.showOpenDialog(window, {
+              properties: ['openDirectory']
+            }, paths => {
+              if (paths) {
+                window.webContents.send('path:set', paths[0]);
+                fs.writeFileSync('params.json', JSON.stringify({ path: paths[0] }));
+              }
+            })
+          }
+        }
+      ]
+    },
+    {
+      label: 'Dev',
+      submenu: [
+        {
+          label: 'Dev tools',
+          accelerator: 'F12',
+          click: (item, focusedWindow) => {
+            focusedWindow.toggleDevTools();
+          }
+        },
+        { role: 'reload' }
+      ]
+    }
+  ]
+
+  const menu = Menu.buildFromTemplate(template)
+  Menu.setApplicationMenu(menu);
+}

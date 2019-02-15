@@ -2,14 +2,14 @@
 <html lang="en" dir="ltr">
   <head>
     <meta charset="utf-8">
-    <title>Electron</title>
+    <title>Video Recording Tool</title>
     <link rel="stylesheet" href="./css/materialize.min.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   </head>
   <body>
     <nav>
       <div class="nav-wrapper teal lighten-2">
-        <a class="brand-logo center">Project</a>
+        <a class="brand-logo center">Video Recording Tool</a>
       </div>
     </nav>
 
@@ -19,10 +19,24 @@
             <div class="card blue-grey darken-1">
               <div class="card-content white-text">
                 <span class="card-title">Recording Panel</span>
+
+                <p>Record with your camera<br>
+                  <span style="display:none" class="new badge rec-text cam" data-badge-caption="Recording..."></span>
+                </p>
                 <div class="card-action">
-                  <a class="btn-floating btn-large waves-effect waves-light green start-rec">
+                  <a class="btn-floating btn-large waves-effect waves-light green start-rec cam tooltipped" data-tooltip="Start recording">
                     <i class="material-icons large black-text">camera_roll</i></a>
-                  <a class="btn-floating btn-large waves-effect waves-light red stop-rec">
+                  <a class="btn-floating btn-large waves-effect waves-light red stop-rec cam disabled tooltipped" data-tooltip="Stop recording">
+                    <i class="material-icons large white-text">cancel</i></a>
+                </div>
+
+                <p>Record your screen<br>
+                  <span style="display:none" class="new badge rec-text dis" data-badge-caption="Recording..."></span>
+                </p>
+                <div class="card-action">
+                  <a class="btn-floating btn-large waves-effect waves-light green start-rec dis tooltipped" data-tooltip="Start recording">
+                    <i class="material-icons large black-text">camera_roll</i></a>
+                  <a class="btn-floating btn-large waves-effect waves-light red stop-rec dis disabled tooltipped" data-tooltip="Stop recording">
                     <i class="material-icons large white-text">cancel</i></a>
                 </div>
 
@@ -37,5 +51,6 @@
   </body>
   <script type="text/javascript">delete module.exports</script>
   <script src="./assets/jquery-3.3.1.min.js"></script>
+  <script src="./assets/materialize.min.js"></script>
   <script type="text/javascript" src="./window.js"></script>
 </html>
