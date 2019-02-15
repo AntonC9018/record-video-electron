@@ -5,7 +5,10 @@ $('.tooltipped').tooltip();
 const { ipcRenderer, desktopCapturer, remote } = require('electron')
 const fs = require('fs');
 
-var recording = false;
+var recing = {
+  cam: 'false',
+  dis: 'false'
+}
 
 var path = '';
 
@@ -19,6 +22,9 @@ try {
 ipcRenderer.on('path:set', (e, p) => path = p);
 
 $('.start-rec.cam').click(() => {
+  if (recing['cam'] === true) return;
+  recing['cam'] = true;
+
   const constraints = {
     video: true,
     audio: true
@@ -29,6 +35,9 @@ $('.start-rec.cam').click(() => {
 })
 
 $('.start-rec.dis').click(() => {
+  if (recing['dis'] === true) return;
+  recing['dis'] = true;
+
   desktopCapturer.getSources({ types: ['window', 'screen'] }, (error, sources) => {
     if (error) throw error
 
@@ -60,7 +69,6 @@ $('.start-rec.dis').click(() => {
 })
 
 function handleStream (stream, cl) {
-  recording = true;
   $('.start-rec.' + cl).addClass('disabled');
   $('.stop-rec.' + cl).removeClass('disabled');
   $('.rec-text.' + cl).slideDown('medium');
@@ -80,7 +88,7 @@ function handleStream (stream, cl) {
   const blobs = [];
 
   blob_reader.onload = function(ev) {
-      if (!recording) return;
+      if (!recing[cl]) return;
       // write to file
       // NOTE: 'ev.currentTarget' is the 'blob_reader'
       storage_stream.write(Buffer.from(ev.currentTarget.result));
@@ -107,7 +115,7 @@ function handleStream (stream, cl) {
 
 
   $('.stop-rec.' + cl).on('click', function clicking () {
-    recording = false;
+    recing[cl] = false;
     $(this).off('click', clicking)
     $('.stop-rec.' + cl).addClass('disabled');
     $('.start-rec.' + cl).removeClass('disabled');
@@ -116,7 +124,7 @@ function handleStream (stream, cl) {
     // stop services
     recorder.stop();
     storage_stream.end();
-    stream.getTracks()[0].stop();
+    stream.getTracks().forEach(e => e.stop());
 
   })
 }
