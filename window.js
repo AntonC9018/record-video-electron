@@ -1,7 +1,3 @@
-$(document).ready(function(){
-
-$('.tooltipped').tooltip();
-
 const { ipcRenderer, desktopCapturer, remote } = require('electron')
 const fs = require('fs');
 
@@ -20,6 +16,12 @@ try {
 } catch (e) {}
 
 ipcRenderer.on('path:set', (e, p) => path = p);
+
+
+
+$(document).ready(function(){
+
+$('.tooltipped').tooltip();
 
 $('.start-rec.cam').click(() => {
   if (recing['cam'] === true) return;
@@ -41,6 +43,8 @@ $('.start-rec.dis').click(() => {
   desktopCapturer.getSources({ types: ['window', 'screen'] }, (error, sources) => {
     if (error) throw error
 
+    console.log(sources);
+
     for (let s of sources) {
       if (!s.name.includes('Chrome')) continue;
 
@@ -61,10 +65,11 @@ $('.start-rec.dis').click(() => {
 
       navigator.mediaDevices.getUserMedia(constraints)
               .then((stream) => handleStream(stream, 'dis'))
-              .catch((e) => handleError(e))
+              .catch((e) => handleError(e));
 
+      return;
     }
-
+    recing['dis'] = false; // error: no recording is taking place
   })
 })
 
@@ -79,9 +84,10 @@ function handleStream (stream, cl) {
   // what preprocesses the video and passes it over to the 'storage_stream'
   const blob_reader = new FileReader();
 
-  // what saves to file
   let d = new Date();
   let fname = `${path}/${cl} (${d.getDate()}-${d.getMonth()}_${d.getHours()}-${d.getMinutes()}).mp4`;
+
+  // what saves to file
   const storage_stream = fs.createWriteStream(fname);
 
   // array that stores unprocessed data
