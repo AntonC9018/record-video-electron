@@ -2,8 +2,8 @@ const { ipcRenderer, desktopCapturer, remote } = require('electron')
 const fs = require('fs');
 
 var recing = {
-  cam: 'false',
-  dis: 'false'
+  cam: false,
+  dis: false
 }
 
 var path = '';
