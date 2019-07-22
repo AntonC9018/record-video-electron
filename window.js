@@ -6,13 +6,7 @@ var recing = {
   dis: false
 }
 
-var path = '';
-
-try {
-  fs.readFile('params.json', (err, data) => {
-    path = JSON.parse(data).path;
-  })
-} catch (e) {}
+var path;
 
 ipcRenderer.on('path:set', (e, p) => path = p);
 
@@ -103,6 +97,7 @@ function selectWindow(sources) {
             </div>`
         )
       .appendTo(div)
+      .find('.btn')
       .click(() => {
         resolve(sources[i])
       })

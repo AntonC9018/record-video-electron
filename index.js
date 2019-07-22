@@ -1,12 +1,24 @@
-const { app, BrowserWindow, dialog, Menu, ipcMain } = require('electron')
+const { app, BrowserWindow, dialog, Menu, shell } = require('electron')
 const path = require('path')
 const url = require('url')
 const fs = require('fs');
+
+let dest
+
+function initDestination() {
+  if (fs.existsSync('./params.json')) {
+    dest = require('./params.json').path
+  } else {
+    dest = app.getPath('documents')
+  }
+}
 
 let window = null
 
 // Wait until the app is ready
 app.once('ready', () => {
+
+  initDestination()
 
   createMenu();
 
@@ -29,8 +41,8 @@ app.once('ready', () => {
 
   // Show window when page is ready
   window.once('ready-to-show', () => {
+    window.webContents.send('path:set', dest);
     window.show()
-
   })
 
 
@@ -42,16 +54,23 @@ function createMenu() {
       label: 'File',
       submenu: [
         {
-          label: 'Set path',
+          label: 'Set destination',
           click: () => {
             dialog.showOpenDialog(window, {
               properties: ['openDirectory']
             }, paths => {
               if (paths) {
+                dest = paths[0]
                 window.webContents.send('path:set', paths[0]);
                 fs.writeFileSync('params.json', JSON.stringify({ path: paths[0] }));
               }
             })
+          }
+        },
+        {
+          label: 'Open destination',
+          click: () => {
+            shell.openItem(dest)
           }
         }
       ]
