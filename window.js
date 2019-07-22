@@ -85,7 +85,7 @@ function selectWindow(sources) {
     // ul 'collection' that will hold each of the soruces
     const ul = $('#sources')
     // empty it
-    ul.find('div.card-panel').remove()
+    ul.find('div.row').remove()
 
     for (let i = 0; i < sources.length; i++) {
       $(
