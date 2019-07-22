@@ -82,15 +82,15 @@ function startRec(s) {
 function selectWindow(sources) {
 
   return new Promise((resolve) => {
-    // ul 'collection' that will hold each of the soruces
-    const ul = $('#sources')
+    // div that will hold each of the sources
+    const div = $('#sources')
     // empty it
-    ul.find('div.row').remove()
+    div.find('div.source').remove()
 
     for (let i = 0; i < sources.length; i++) {
       $(
           `
-            <div class="row">
+            <div class="row source">
               <div class="card">
                 <div class="card-image">
                   <img src="${sources[i].thumbnail.toDataURL()}"/>
@@ -102,14 +102,11 @@ function selectWindow(sources) {
               </div>         
             </div>`
         )
-      .appendTo(ul)
+      .appendTo(div)
       .click(() => {
         resolve(sources[i])
       })
     }
-
-
-    // $('#modal').find('.modal-content').append(im)
 
     $('#close-modal').click(function _() {
       resolve(false)
