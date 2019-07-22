@@ -10,18 +10,21 @@ var path = '';
 
 try {
   fs.readFile('params.json', (err, data) => {
-    console.log(JSON.parse(data));
     path = JSON.parse(data).path;
   })
 } catch (e) {}
 
 ipcRenderer.on('path:set', (e, p) => path = p);
 
+$(document).ready(function () {
+  $('.modal').modal({
+    onCloseEnd: function() {
+      $('#close-modal').click()
+    }
+  });
+  $('.tooltipped').tooltip();
+});
 
-
-$(document).ready(function(){
-
-$('.tooltipped').tooltip();
 
 $('.start-rec.cam').click(() => {
   if (recing['cam'] === true) return;
@@ -36,56 +39,142 @@ $('.start-rec.cam').click(() => {
           .catch((e) => handleError(e))
 })
 
-$('.start-rec.dis').click(() => {
+function getSources() {
+  return new Promise((resolve) => {
+    desktopCapturer.getSources(
+      {
+        types: ['window', 'screen'],
+        thumbnailSize: { width: 400, height: 400 },
+        fetchWindowIcons: true
+      },
+
+      (error, sources) => {
+        if (error) throw error
+        resolve(sources)
+      })
+  })
+}
+
+
+function startRec(s) {
+
+  const constraints = {
+      audio: {
+        mandatory: 
+          {
+            chromeMediaSource: 'desktop',
+            chromeMediaSourceId: s.id
+          }
+      },
+      video: {
+        mandatory: 
+          {
+            chromeMediaSource: 'desktop',
+            chromeMediaSourceId: s.id
+          }
+      }
+    }
+
+  return navigator.mediaDevices.getUserMedia(constraints)
+}
+
+
+function selectWindow(sources) {
+
+  return new Promise((resolve) => {
+    // ul 'collection' that will hold each of the soruces
+    const ul = $('#sources')
+    // empty it
+    ul.find('div.card-panel').remove()
+
+    for (let i = 0; i < sources.length; i++) {
+      $(
+          `
+            <div class="row">
+              <div class="card">
+                <div class="card-image">
+                  <img src="${sources[i].thumbnail.toDataURL()}"/>
+                </div>
+                <div class="card-content center-align">                    
+                  <span class="card-title"><h6>${sources[i].name}</h6></span>  
+                  <a class="waves-effect waves-light btn">select</a>
+                </div>
+              </div>         
+            </div>`
+        )
+      .appendTo(ul)
+      .click(() => {
+        resolve(sources[i])
+      })
+    }
+
+
+    // $('#modal').find('.modal-content').append(im)
+
+    $('#close-modal').click(function _() {
+      resolve(false)
+      $(this).off('click', _)
+    })
+
+    // open up the modal
+    $('#modal').modal('open')
+  })
+  
+}
+
+function closeModal() {
+  $('#modal').modal('close')
+}
+
+
+
+$('.start-rec.dis').click(async () => {
+  // already recording
   if (recing['dis'] === true) return;
+
+  // start recording
   recing['dis'] = true;
 
-  desktopCapturer.getSources({ types: ['window', 'screen'] }, (error, sources) => {
-    if (error) throw error
+  // get all available sources
+  let ss = await getSources()
 
-    console.log(sources);
+  // if got no sources
+  if (!ss || (ss && ss.length == 0)) {
+    recing['dis'] = false;
+    return;
+  }
 
-    for (let s of sources) {
-      if (!s.name.includes('Chrome')) continue;
+  // let the modal pop up and the user to select what source they want
+  let source = await selectWindow(ss)
 
-      const constraints = {
-        audio: {
-          mandatory: {
-            chromeMediaSource: 'desktop',
-            chromeMediaSourceId: s.id
-          }
-        },
-        video: {
-          mandatory: {
-            chromeMediaSource: 'desktop',
-            chromeMediaSourceId: s.id
-          }
-        }
-      }
+  // close the popup
+  closeModal()
 
-      navigator.mediaDevices.getUserMedia(constraints)
-              .then((stream) => handleStream(stream, 'dis'))
-              .catch((e) => handleError(e));
+  // the user closed the popup themselves or some error occured
+  if (!source) {
+    recing['dis'] = false;
+    return;
+  }
 
-      return;
-    }
-    recing['dis'] = false; // error: no recording is taking place
-  })
+  let stream = await startRec(source)
+
+  if (stream) handleStream(stream, 'dis')
+
+  else {
+    recing['dis'] = false
+  }
 })
 
 function handleStream (stream, cl) {
-  $('.start-rec.' + cl).addClass('disabled');
-  $('.stop-rec.' + cl).removeClass('disabled');
-  $('.rec-text.' + cl).slideDown('medium');
-
+  
+  uiStartRec(cl)
 
   const recorder = new MediaRecorder(stream); // what receives the video
 
   // what preprocesses the video and passes it over to the 'storage_stream'
   const blob_reader = new FileReader();
 
-  let d = new Date();
-  let fname = `${path}/${cl} (${d.getDate()}-${d.getMonth()}_${d.getHours()}-${d.getMinutes()}).mp4`;
+  let fname = getName(path, cl);
 
   // what saves to file
   const storage_stream = fs.createWriteStream(fname);
@@ -121,22 +210,41 @@ function handleStream (stream, cl) {
 
 
   $('.stop-rec.' + cl).on('click', function clicking () {
-    recing[cl] = false;
-    $(this).off('click', clicking)
-    $('.stop-rec.' + cl).addClass('disabled');
-    $('.start-rec.' + cl).removeClass('disabled');
-    $('.rec-text.' + cl).slideUp('medium');
+
+    if (!recing[cl]) return; 
+
+    uiStopRec(cl)
+
+    $(this).off('click', clicking)    
 
     // stop services
     recorder.stop();
     storage_stream.end();
     stream.getTracks().forEach(e => e.stop());
+    recing[cl] = false;
 
   })
 }
 
 function handleError (e) {
   console.log(e)
+  recing['dis'] = false; // error: no recording is taking place
 }
 
-})
+
+function uiStopRec(cl) {
+  $('.start-rec.' + cl).removeClass('disabled');
+  $('.stop-rec.' + cl).addClass('disabled');
+  $('.rec-text.' + cl).slideUp('medium');
+}
+
+function uiStartRec(cl) {
+  $('.start-rec.' + cl).addClass('disabled');
+  $('.stop-rec.' + cl).removeClass('disabled');
+  $('.rec-text.' + cl).slideDown('medium');
+}
+
+function getName(path, cl) {
+  let d = new Date();
+  return `${path}/${cl} (${d.getDate()}-${d.getMonth() + 1}_${d.getHours()}-${d.getMinutes()}).mp4`
+}
